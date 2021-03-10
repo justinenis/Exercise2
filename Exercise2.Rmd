@@ -73,6 +73,25 @@ When holding both hour of day and weekend status constant, it does not appear th
 
 # Question 2
 
+```{r, echo=FALSE, include=FALSE}
+data(SaratogaHouses)
+
+saratoga_split = initial_split(SaratogaHouses, prop = 0.8)
+saratoga_train = training(saratoga_split)
+saratoga_test = testing(saratoga_split)
+
+
+lm2 = lm(price ~ . - pctCollege - sewer - waterfront - landValue - newConstruction, data=saratoga_train)
+lm0 = lm(price ~ 1, data = saratoga_train)
+lm_forward = step(lm0, direction = 'forward',
+      scope=~(pctCollege + landValue + bedrooms + fireplaces + bathrooms + waterfront
+      + heating + fuel))
+```
+
+
+```{r}
+
+```
 
 \newpage
 
@@ -110,10 +129,10 @@ glm = glm(Default ~ duration + amount + installment + age + history +
 
 
 ```{r, echo=FALSE}
-summary(glm, scale = TRUE, vifs = TRUE, part.corr = TRUE, confint = TRUE, pvals = FALSE)
+coef(glm)
 ```
 
-Notably, the default probabilities are much lower for individuals with either a poor or terrible credit history relative to individuals with a good history. Although, when observing the glm, individuals with either a poor or terrible credit history have a negative effect in regards to defaulting on a loan. I believe that these conflicting observations are due to the bank having a more strict loan process for individuals with either a poor or terrible credit history. Individuals that are in either category are more likely to repay their loans back on time. In contrast, indivuals with a good credit history are given a more lenient loan process and as a result, have a higher probability in defaulting on their loans. 
+It should be noted that the default probabilities are much lower for individuals with either a poor or terrible credit history relative to individuals with a good history. Although, when observing the glm, individuals with either a poor or terrible credit history have a negative effect in regards to defaulting on a loan. I believe that these conflicting observations are due to the bank having a more strict loan process for individuals with either a poor or terrible credit history. Individuals that are in either category are more likely to repay their loans back on time. In contrast, indivuals with a good credit history are given a more lenient loan process and as a result, have a higher probability in defaulting on their loans. 
 
 If the purpose of the model is to screen prospective borrowers to classify them into "high" versus "low" probability of default, then no, I do not believe this data set accomplished its goal. The conclusion from this data set should not be to loan less to individuals to a good credit history. Instead, the end result should be for the bank to apply the same strict loan standards that are applied to others that may have either a poor or terrible credit history. This would give a better source of data and better inform the bank on the probability of default.
 
