@@ -9,8 +9,8 @@ library(mosaic)
 library(jtools)
 library(dbplyr)
 library(naivebayes)
+library(nnet)
 
-library(gamlr)
 
 #Question 1
 
@@ -375,42 +375,22 @@ roc
 
 
 #Model Validation 2
+knn_k20 = caret::knn3(children ~ hotel + lead_time+ reserved_room_type + assigned_room_type + 
+                        booking_changes + adults + required_car_parking_spaces + booking_changes + 
+                        average_daily_rate + is_repeated_guest + arrival_date, data = val, k = 20)
+
+val_pred = val %>%
+  mutate(children_pred_k20 = predict(knn_k20, val))
+
+val_pred1 = val_pred %>%
+  mutate(ifelse(children_pred_k20 > 0.5, 1, 0))
 
 
-X_NB = as.matrix(val)
-Y_NB = factor(val$children)
-
-N = length(Y_NB)
-train_frac = 0.8
-train_set = sample.int(N, floor(train_frac*N)) %>% sort
-test_set = setdiff(1:N, train_set)
-
-
-X_train = X_NB[train_set,]
-X_test = X_NB[test_set,]
-
-Y_train = Y_NB[train_set]
-Y_test = Y_NB[test_set]
-
-nb_model = multinomial_naive_bayes(x = X_train, y = Y_train)
-
-y_test_pred = predict(nb_model, X_test)
-
-table(y_test, y_test_pred)
-
-sum(diag(table(Y_test, y_test_pred)))/length(Y_test)
-
-
-
-
-
-
-knn_lm_forward = knnreg(price ~ livingArea + landValue + bathrooms + waterfront + 
-                          newConstruction + heating + centralAir + lotSize + bedrooms + 
-                          rooms + age, data = Houses_scale, k = 20)
-
-K_folds = 30
-k_grid = seq(2, 80, by=2)
-Houses_folds = crossv_kfold(Houses_scale, k=K_folds)
-
-
+expected_children = val_pred1%>%
+  summarize(num = sum(ifelse(children_pred_k20 > 0.5, 1, 0)))
+expected_children
+                      
+                      
+actual_children = val_pred1%>%
+  summarize(num = sum(children ==1))
+actual_children
