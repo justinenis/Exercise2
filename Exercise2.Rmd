@@ -367,6 +367,33 @@ roc
 ```
 
 
+#Model Validation 2
+```{r}
+
+knn_k20 = caret::knn3(children ~ hotel + lead_time+ reserved_room_type + assigned_room_type + 
+                        booking_changes + adults + required_car_parking_spaces + booking_changes + 
+                        average_daily_rate + is_repeated_guest + arrival_date, data = val, k = 20)
+
+val_pred = val %>%
+  mutate(children_pred_k20 = predict(knn_k20, val))
+
+val_pred1 = val_pred %>%
+  mutate(ifelse(children_pred_k20 > 0.5, 1, 0))
+
+
+expected_children = val_pred1%>%
+  summarize(num = sum(ifelse(children_pred_k20 > 0.5, 1, 0)))
+expected_children
+                      
+                      
+actual_children = val_pred1%>%
+  summarize(num = sum(children ==1))
+actual_children
+
+```
+
+My model did fairly poorly relative to the number of bookings made with children. Across all 20 folds, my model predicted that 4975 children would be present, while 402 actual children were present in the data. 
+
 
 
 
