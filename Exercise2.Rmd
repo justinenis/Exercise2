@@ -356,7 +356,7 @@ roc_curve = foreach(thresh = thresh_grid, .combine='rbind') %do% {
 
 roc = ggplot(roc_curve) + 
   geom_line(aes(x=FPR, y=TPR, color=model)) + 
-  labs(title="ROC curves: Logit Model") +
+  labs(title="ROC curve: Logit Model") +
   theme_bw(base_size = 10)
 ```
 
