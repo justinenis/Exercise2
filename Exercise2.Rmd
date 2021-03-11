@@ -14,6 +14,7 @@ library(foreach)
 library(mosaic)
 library(jtools)
 library(dbplyr)
+library(naivebayes)
 ```
 
 ## Question 1
@@ -175,7 +176,7 @@ lm_forward_rmse_plot
 lm2_rmse_plot
 ```
 
-Relative to the Medium Linear Model, the Best Linear Model has both a lower AIC and RMSE, while also a higher Adjusted R-squared. For these reasons, the Best Linear Model seems to do better at achieving lower out-of-sample mean-squared error. 
+Relative to the Medium Linear Model, the Best Linear Model has both a lower AIC and RMSE, while also a higher Adjusted R-squared. For these reasons, the Best Linear Model is the optimal choice since it seems to do better at achieving lower out-of-sample mean-squared error. 
 
 \newpage
 
@@ -224,7 +225,106 @@ If the purpose of the model is to screen prospective borrowers to classify them 
 
 # Question 4
 
-```{r cars}
+```{r}
+dev = read_csv('/Users/franklinstudent/Desktop/GitHub/Exercise-2/hotels_dev.csv')
+```
+
+```{r}
+dev_split = initial_split(dev, prop = 0.8)
+dev_train = training(dev_split)
+dev_test = testing(dev_split)
+
+
+lm_dev1 = lm(children ~ market_segment + adults + customer_type + is_repeated_guest, data = dev_train)
+lm_dev2 = lm(children ~ . - arrival_date, data = dev_train)
+lm_devbest = lm(children ~ hotel + lead_time+ reserved_room_type + assigned_room_type + booking_changes + adults + required_car_parking_spaces + booking_changes + average_daily_rate + is_repeated_guest + arrival_date, data = dev_train)
 
 ```
+
+
+```{r}
+#Baseline 1: Small Model
+phat_train_dev1 = predict(lm_dev1, dev_train)
+yhat_train_dev1 = ifelse(phat_train_dev1 > 0.5, 1, 0)
+confusion_in1 = table(y = dev_train$children, yhat = yhat_train_dev1)
+confusion_in1
+sum(diag(confusion_in1))/sum(confusion_in1)
+
+phat_test_dev1 = predict(lm_dev1, dev_test)
+yhat_test_dev1 = ifelse(phat_test_dev1 > 0.5, 1, 0)
+confusion_out1 = table(y = dev_test$children, yhat = yhat_test_dev1)
+confusion_out1
+sum(diag(confusion_out1))/sum(confusion_out1)
+
+
+#Baseline 2: Big Model 
+phat_train_dev2 = predict(lm_dev2, dev_train)
+yhat_train_dev2 = ifelse(phat_train_dev2 > 0.5, 1, 0)
+confusion_in2 = table(y = dev_train$children, yhat = yhat_train_dev2)
+confusion_in2
+sum(diag(confusion_in2))/sum(confusion_in2)
+
+phat_test_dev2 = predict(lm_dev2, dev_test)
+yhat_test_dev2 = ifelse(phat_test_dev2 > 0.5, 1, 0)
+confusion_out2 = table(y = dev_test$children, yhat = yhat_test_dev2)
+confusion_out2
+sum(diag(confusion_out2))/sum(confusion_out2)
+
+
+#Best Linear Model
+phat_train_devbest = predict(lm_devbest, dev_train)
+yhat_train_devbest = ifelse(phat_train_devbest > 0.5, 1, 0)
+confusion_in_devbest = table(y = dev_train$children, yhat = yhat_train_devbest)
+confusion_in_devbest
+sum(diag(confusion_in_devbest))/sum(confusion_in_devbest)
+
+
+phat_test_devbest = predict(lm_devbest, dev_test)
+yhat_test_devbest = ifelse(phat_test_devbest > 0.5, 1, 0)
+confusion_out_devbest = table(y = dev_test$children, yhat = yhat_test_devbest)
+confusion_out_devbest
+sum(diag(confusion_out_devbest))/sum(confusion_out_devbest)
+
+table(dev_train$children)
+33096/sum(table(dev_train$children))
+
+
+table(dev_test$children)
+8269/sum(table(dev_test$children))
+
+
+#abolute improvement 
+0.9193078 - 0.9188799
+
+
+#The relative improvement
+0.9193078/0.9188799
+
+
+
+
+val = read_csv('/Users/franklinstudent/Desktop/GitHub/Exercise-2/hotels_val.csv')
+
+
+logit_val = glm(children ~ hotel + lead_time+ reserved_room_type + assigned_room_type + 
+                  booking_changes + adults + required_car_parking_spaces + booking_changes + 
+                  average_daily_rate + is_repeated_guest + arrival_date, data = val, family = 'binomial')
+
+coef(logit_val)
+
+
+phat_test_logit_val = predict(logit_val, dev_test, type = 'response')
+yhat_test_logit_val = ifelse(phat_test_logit_val > 0.5, 1, 0)
+confusion_out_logit= table(y = dev_test$children, yhat = yhat_test_logit_val)
+confusion_out_logit
+
+
+```
+
+
+
+
+
+
+
 
