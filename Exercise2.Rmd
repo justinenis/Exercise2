@@ -13,6 +13,7 @@ library(parallel)
 library(foreach)
 library(mosaic)
 library(jtools)
+library(dbplyr)
 ```
 
 ## Question 1
@@ -68,15 +69,27 @@ ggplot(data = capmetro) +
 
 When holding both hour of day and weekend status constant, it does not appear that temperature has a noticeable effect on the number of UT students riding the bus. This is determined by the observable changes in ridership throughout the day. Within each hour of the day, the quantity of boardings remain similar as the temperature changes. 
 
-
 \newpage
+
 
 # Question 2
 
-```{r, echo=FALSE, include=FALSE}
+```{r, echo = FALSE, include=FALSE}
 data(SaratogaHouses)
 
-saratoga_split = initial_split(SaratogaHouses, prop = 0.8)
+Houses_scale = SaratogaHouses %>%
+  mutate(across(lotSize,scale)) %>%
+  mutate(across(age,scale)) %>%
+  mutate(across(landValue,scale)) %>%
+  mutate(across(livingArea,scale)) %>%
+  mutate(across(bedrooms,scale)) %>%
+  mutate(across(fireplaces,scale)) %>%
+  mutate(across(bathrooms,scale)) %>%
+  mutate(across(rooms,scale)) %>%
+  mutate(across(pctCollege,scale)) 
+
+
+saratoga_split = initial_split(Houses_scale, prop = 0.8)
 saratoga_train = training(saratoga_split)
 saratoga_test = testing(saratoga_split)
 
@@ -86,12 +99,83 @@ lm0 = lm(price ~ 1, data = saratoga_train)
 lm_forward = step(lm0, direction = 'forward',
       scope=~(pctCollege + landValue + bedrooms + fireplaces + bathrooms + waterfront
       + heating + fuel))
+
+AIC(lm2)
+AIC(lm_forward)
+
+summary(lm2)
+summary(lm_forward)
+
+getCall(lm_forward)
+coef(lm_forward)
+
+
+
+
+
+
+rmse_lm2 = rmse(lm2, saratoga_test)
+rmse_lm_forward = rmse(lm_forward, saratoga_test)
+
+rmse_lm2
+rmse_lm_forward
+
+knn_lm_forward = knnreg(price ~ livingArea + landValue + bathrooms + waterfront + 
+         newConstruction + heating + centralAir + lotSize + bedrooms + 
+         rooms + age, data = Houses_scale, k = 20)
+
+K_folds = 30
+k_grid = seq(2, 80, by=2)
+Houses_folds = crossv_kfold(Houses_scale, k=K_folds)
+
+cv_grid = foreach(k = k_grid, .combine='rbind') %do% {
+  models = map(Houses_folds$train, ~ knnreg(price ~ livingArea + landValue + bathrooms + waterfront + 
+                                            newConstruction + centralAir + heating + lotSize + bedrooms + 
+                                            rooms + age, k=k, data = Houses_scale, use.all=FALSE))
+  errs = map2_dbl(models, Houses_folds$test, modelr::rmse)
+  c(k=k, err = mean(errs), std_err = sd(errs)/sqrt(K_folds))
+} %>% as.data.frame
+
+
+lm_forward_rmse_plot = ggplot(cv_grid) +
+  geom_point(aes(x=k, y=err)) +
+  geom_errorbar(aes(x=k, ymin = err-std_err, ymax = err+std_err)) + 
+  labs(y="RMSE", title="RMSE vs k for KNN regression")
+
+
+
+
+knnlm2 = knnreg(price ~ . - pctCollege - sewer - waterfront - landValue - newConstruction,
+       data = Houses_scale, k = 20)
+
+cv_grid = foreach(k = k_grid, .combine='rbind') %do% {
+  models = map(Houses_folds$train, ~ knnreg(price ~ . - pctCollege - sewer - waterfront - 
+                                              landValue - newConstruction,
+                                            k=k, data = Houses_scale, use.all=FALSE))
+  errs = map2_dbl(models, Houses_folds$test, modelr::rmse)
+  c(k=k, err = mean(errs), std_err = sd(errs)/sqrt(K_folds))
+} %>% as.data.frame
+
+
+lm2_rmse_plot = ggplot(cv_grid) +
+  geom_point(aes(x=k, y=err)) +
+  geom_errorbar(aes(x=k, ymin = err-std_err, ymax = err+std_err)) + 
+  labs(y="RMSE", title="RMSE vs k for KNN regression")
+
+```
+
+# Best Linear Model
+```{r, echo=FALSE}
+lm_forward_rmse_plot
 ```
 
 
-```{r}
-
+# Medium Linear Model
+```{r, echo=FALSE}
+lm2_rmse_plot
 ```
+
+Relative to the Medium Linear Model, the Best Linear Model has both a lower AIC and RMSE, while also a higher Adjusted R-squared. For these reasons, the Best Linear Model seems to do better at achieving lower out-of-sample mean-squared error. 
 
 \newpage
 
@@ -140,22 +224,7 @@ If the purpose of the model is to screen prospective borrowers to classify them 
 
 # Question 4
 
-
-
-
-
-
-
 ```{r cars}
-summary(cars)
+
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
 
