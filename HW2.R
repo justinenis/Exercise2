@@ -8,6 +8,7 @@ library(foreach)
 library(mosaic)
 library(jtools)
 library(dbplyr)
+library(naivebayes)
 
 library(gamlr)
 
@@ -178,15 +179,6 @@ ggplot(cv_grid) +
 
 
 
-cv_grid = foreach(k = k_grid, .combine='rbind') %do% {
-  models = map(lm_forward$train, ~ knnreg(price ~ livingArea + landValue + waterfront + bathrooms + 
-                                            newConstruction + heating + lotSize + centralAir + rooms + 
-                                            bedrooms, k=k, data = Houses_scale, use.all=FALSE))
-  errs = map2_dbl(models, lm_forward$test, modelr::rmse)
-  c(k=k, err = mean(errs), std_err = sd(errs)/sqrt(K_folds))
-} %>% as.data.frame
-
-
 
 
 
@@ -258,21 +250,17 @@ dev_test = testing(dev_split)
 
 lm_dev1 = lm(children ~ market_segment + adults + customer_type + is_repeated_guest, data = dev_train)
 lm_dev2 = lm(children ~ . - arrival_date, data = dev_train)
-lm_dev0 = lm(children ~ 1, data = dev_train)
-lm_devforward = step(lm_dev0, direction = 'forward',
-                  scope=~(lead_time + stays_in_week_nights + stays_in_weekend_nights + adults + meal 
-                          + is_repeated_guest + previous_cancellations + customer_type + days_in_waiting_list
-                          + reserved_room_type + assigned_room_type + booking_changes + average_daily_rate + deposit_type
-                          + required_car_parking_spaces + total_of_special_requests))
+lm_devbest = lm(children ~ hotel + lead_time+ reserved_room_type + assigned_room_type + booking_changes + adults + 
+                  required_car_parking_spaces + booking_changes + average_daily_rate + is_repeated_guest + arrival_date, data = dev_train)
 
 
-#baseline 1: small model
+
+#Baseline 1: Small Model
 phat_train_dev1 = predict(lm_dev1, dev_train)
 yhat_train_dev1 = ifelse(phat_train_dev1 > 0.5, 1, 0)
 confusion_in1 = table(y = dev_train$children, yhat = yhat_train_dev1)
 confusion_in1
 sum(diag(confusion_in1))/sum(confusion_in1)
-
 
 phat_test_dev1 = predict(lm_dev1, dev_test)
 yhat_test_dev1 = ifelse(phat_test_dev1 > 0.5, 1, 0)
@@ -281,13 +269,12 @@ confusion_out1
 sum(diag(confusion_out1))/sum(confusion_out1)
 
 
-#baseline 2: big model 
+#Baseline 2: Big Model 
 phat_train_dev2 = predict(lm_dev2, dev_train)
 yhat_train_dev2 = ifelse(phat_train_dev2 > 0.5, 1, 0)
 confusion_in2 = table(y = dev_train$children, yhat = yhat_train_dev2)
 confusion_in2
 sum(diag(confusion_in2))/sum(confusion_in2)
-
 
 phat_test_dev2 = predict(lm_dev2, dev_test)
 yhat_test_dev2 = ifelse(phat_test_dev2 > 0.5, 1, 0)
@@ -296,43 +283,34 @@ confusion_out2
 sum(diag(confusion_out2))/sum(confusion_out2)
 
 
-#best linear model
-getCall(lm_devforward)
-
-lm_child1 = lm(children ~ reserved_room_type + average_daily_rate + 
-     total_of_special_requests + assigned_room_type + booking_changes + 
-     adults + customer_type + meal + is_repeated_guest + lead_time + 
-     stays_in_week_nights + required_car_parking_spaces + stays_in_weekend_nights, 
-   data = dev_train)
+#Best Linear Model
+phat_train_devbest = predict(lm_devbest, dev_train)
+yhat_train_devbest = ifelse(phat_train_devbest > 0.5, 1, 0)
+confusion_in_devbest = table(y = dev_train$children, yhat = yhat_train_devbest)
+confusion_in_devbest
+sum(diag(confusion_in_devbest))/sum(confusion_in_devbest)
 
 
-phat_train_devforward = predict(lm_child1, dev_train)
-yhat_train_devforward = ifelse(phat_train_devforward > 0.5, 1, 0)
-confusion_in_forward = table(y = dev_train$children, yhat = yhat_train_devforward)
-confusion_in_forward
-sum(diag(confusion_in_forward))/sum(confusion_in_forward)
-
-
-phat_test_devforward = predict(lm_child1, dev_test)
-yhat_test_devforward = ifelse(phat_test_devforward > 0.5, 1, 0)
-confusion_out_forward = table(y = dev_test$children, yhat = yhat_test_devforward)
-confusion_out_forward
-sum(diag(confusion_out_forward))/sum(confusion_out_forward)
+phat_test_devbest = predict(lm_devbest, dev_test)
+yhat_test_devbest = ifelse(phat_test_devbest > 0.5, 1, 0)
+confusion_out_devbest = table(y = dev_test$children, yhat = yhat_test_devbest)
+confusion_out_devbest
+sum(diag(confusion_out_devbest))/sum(confusion_out_devbest)
 
 table(dev_train$children)
-33098/sum(table(dev_train$children))
+33096/sum(table(dev_train$children))
 
 
 table(dev_test$children)
-8267/sum(table(dev_test$children))
+8269/sum(table(dev_test$children))
 
 
 #abolute improvement 
-0.9187523 - 0.9211023
+0.9193078 - 0.9188799
 
 
 #The relative improvement
-0.9187523/0.9211023
+0.9193078/0.9188799
 
 
 
@@ -340,11 +318,9 @@ table(dev_test$children)
 val = read_csv('/Users/franklinstudent/Desktop/GitHub/Exercise-2/hotels_val.csv')
 
 
-logit_val = glm(children ~ reserved_room_type + average_daily_rate + 
-                  total_of_special_requests + assigned_room_type + booking_changes + 
-                  adults + customer_type + meal + is_repeated_guest + lead_time + 
-                  stays_in_week_nights + required_car_parking_spaces + stays_in_weekend_nights, 
-                data = val, family = 'binomial')
+logit_val = glm(children ~ hotel + lead_time+ reserved_room_type + assigned_room_type + 
+                  booking_changes + adults + required_car_parking_spaces + booking_changes + 
+                  average_daily_rate + is_repeated_guest + arrival_date, data = val, family = 'binomial')
 
 coef(logit_val)
 
@@ -355,49 +331,43 @@ confusion_out_logit= table(y = dev_test$children, yhat = yhat_test_logit_val)
 confusion_out_logit
 
 
-#error rate of 6.32%
-(464+105)/8999
+#Error Rate of 6.5%
+(510 + 75)/8999
 
-#accuracy rate of 93.67%
-1 - (464+105)/8999
+#Accuracy Rate of 93.49%
+1 - (510 + 75)/8999
 
-#Life over LPM: 1.02
-0.9367708/0.9187523
+#Lift over LPM: 1.02
+0.9349928/0.9193078
 
-#True Positivity Rate (TPR) of 34.65%
-246/(464 +246)
+#True Positive Rate (TPR) of 30.14%
+220/(510 + 220)
 
-#False Positivity Rate (FPR) of 1.27%
-105/ (8184 + 105)
+#False Positive Rate (FPR) of 0.9%
+75/ (8194 + 75)
 
-#False Discovery Rate (FDR) of 29.91% 
-105/(105+246)
+#False Discovery Rate (FDR) of 24.42% 
+75/(75+220)
 
 
 #Model Validation 1
-phat_train_devforward = predict(lm_child1, dev_test, type = 'response')
 phat_test_logit_val = predict(logit_val, dev_test, type = 'response')
 thresh_grid = seq(0.95, 0.05, by=-0.005)
 
 
 roc_curve = foreach(thresh = thresh_grid, .combine='rbind') %do% {
-  yhat_test_linear = ifelse(phat_train_devforward >= thresh, 1, 0)
   yhat_test_logit_val = ifelse(phat_test_logit_val >= thresh, 1, 0)
-  confusion_out_linear = table(children = dev_test$children, yhat = yhat_test_linear)
   confusion_out_logit = table(children = dev_test$children, yhat = yhat_test_logit_val)
-  out_lin = data.frame(model = "linear",
-                       TPR = confusion_out_linear[2,2]/sum(dev_test$children==1),
-                       FPR = confusion_out_linear[1,2]/sum(dev_test$children==0))
   out_logit = data.frame(model = "logit",
                          TPR = confusion_out_logit[2,2]/sum(dev_test$children==1),
                          FPR = confusion_out_logit[1,2]/sum(dev_test$children==0))
   
-  rbind(out_lin, out_logit)
+  rbind(out_logit)
 } %>% as.data.frame()
 
 roc = ggplot(roc_curve) + 
   geom_line(aes(x=FPR, y=TPR, color=model)) + 
-  labs(title="ROC curves: linear vs. logit models") +
+  labs(title="ROC curves: Logit Model") +
   theme_bw(base_size = 10)
 
 roc 
@@ -407,13 +377,40 @@ roc
 #Model Validation 2
 
 
+X_NB = as.matrix(val)
+Y_NB = factor(val$children)
+
+N = length(Y_NB)
+train_frac = 0.8
+train_set = sample.int(N, floor(train_frac*N)) %>% sort
+test_set = setdiff(1:N, train_set)
+
+
+X_train = X_NB[train_set,]
+X_test = X_NB[test_set,]
+
+Y_train = Y_NB[train_set]
+Y_test = Y_NB[test_set]
+
+nb_model = multinomial_naive_bayes(x = X_train, y = Y_train)
+
+y_test_pred = predict(nb_model, X_test)
+
+table(y_test, y_test_pred)
+
+sum(diag(table(Y_test, y_test_pred)))/length(Y_test)
 
 
 
 
 
 
+knn_lm_forward = knnreg(price ~ livingArea + landValue + bathrooms + waterfront + 
+                          newConstruction + heating + centralAir + lotSize + bedrooms + 
+                          rooms + age, data = Houses_scale, k = 20)
 
-
+K_folds = 30
+k_grid = seq(2, 80, by=2)
+Houses_folds = crossv_kfold(Houses_scale, k=K_folds)
 
 
