@@ -225,11 +225,11 @@ If the purpose of the model is to screen prospective borrowers to classify them 
 
 # Question 4
 
-```{r}
+```{r, echo=FALSE, include=FALSE}
 dev = read_csv('/Users/franklinstudent/Desktop/GitHub/Exercise-2/hotels_dev.csv')
 ```
 
-```{r}
+```{r, echo = FALSE, include=FALSE}
 dev_split = initial_split(dev, prop = 0.8)
 dev_train = training(dev_split)
 dev_test = testing(dev_split)
@@ -242,7 +242,7 @@ lm_devbest = lm(children ~ hotel + lead_time+ reserved_room_type + assigned_room
 ```
 
 
-```{r}
+```{r, echo=FALSE, include=FALSE}
 #Baseline 1: Small Model
 phat_train_dev1 = predict(lm_dev1, dev_train)
 yhat_train_dev1 = ifelse(phat_train_dev1 > 0.5, 1, 0)
@@ -317,12 +317,53 @@ phat_test_logit_val = predict(logit_val, dev_test, type = 'response')
 yhat_test_logit_val = ifelse(phat_test_logit_val > 0.5, 1, 0)
 confusion_out_logit= table(y = dev_test$children, yhat = yhat_test_logit_val)
 confusion_out_logit
+```
+
+```{r, echo=FALSE, include=FALSE}
+#Error Rate of 6.5%
+(510 + 75)/8999
+
+#Accuracy Rate of 93.49%
+1 - (510 + 75)/8999
+
+#Lift over LPM: 1.02
+0.9349928/0.9193078
+
+#True Positive Rate (TPR) of 30.14%
+220/(510 + 220)
+
+#False Positive Rate (FPR) of 0.9%
+75/ (8194 + 75)
+
+#False Discovery Rate (FDR) of 24.42% 
+75/(75+220)
 
 
+#Model Validation 1
+phat_test_logit_val = predict(logit_val, dev_test, type = 'response')
+thresh_grid = seq(0.95, 0.05, by=-0.005)
+
+
+roc_curve = foreach(thresh = thresh_grid, .combine='rbind') %do% {
+  yhat_test_logit_val = ifelse(phat_test_logit_val >= thresh, 1, 0)
+  confusion_out_logit = table(children = dev_test$children, yhat = yhat_test_logit_val)
+  out_logit = data.frame(model = "logit",
+                         TPR = confusion_out_logit[2,2]/sum(dev_test$children==1),
+                         FPR = confusion_out_logit[1,2]/sum(dev_test$children==0))
+  
+  rbind(out_logit)
+} %>% as.data.frame()
+
+roc = ggplot(roc_curve) + 
+  geom_line(aes(x=FPR, y=TPR, color=model)) + 
+  labs(title="ROC curves: Logit Model") +
+  theme_bw(base_size = 10)
 ```
 
 
-
+```{r, echo=FALSE}
+roc
+```
 
 
 
