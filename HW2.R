@@ -242,12 +242,12 @@ coef(glm)
 
 dev = read_csv('/Users/franklinstudent/Desktop/GitHub/Exercise-2/hotels_dev.csv')
 
-
+#Train, Test, Split
 dev_split = initial_split(dev, prop = 0.8)
 dev_train = training(dev_split)
 dev_test = testing(dev_split)
 
-
+#Linear models: Small, Big, Best
 lm_dev1 = lm(children ~ market_segment + adults + customer_type + is_repeated_guest, data = dev_train)
 lm_dev2 = lm(children ~ . - arrival_date, data = dev_train)
 lm_devbest = lm(children ~ hotel + lead_time+ reserved_room_type + assigned_room_type + booking_changes + adults + 
@@ -309,7 +309,7 @@ table(dev_test$children)
 0.9193078 - 0.9188799
 
 
-#The relative improvement
+#relative improvement
 0.9193078/0.9188799
 
 
@@ -317,7 +317,7 @@ table(dev_test$children)
 
 val = read_csv('/Users/franklinstudent/Desktop/GitHub/Exercise-2/hotels_val.csv')
 
-
+#logit model
 logit_val = glm(children ~ hotel + lead_time+ reserved_room_type + assigned_room_type + 
                   booking_changes + adults + required_car_parking_spaces + booking_changes + 
                   average_daily_rate + is_repeated_guest + arrival_date, data = val, family = 'binomial')
@@ -394,3 +394,7 @@ expected_children
 actual_children = val_pred1%>%
   summarize(num = sum(children ==1))
 actual_children
+
+# My model did fairly poorly relative to the number of bookings made iwth children. 
+# Across all 20 folds, my model predicted that 4975 children would be present, 
+# while 402 actual children were present in the data. 
