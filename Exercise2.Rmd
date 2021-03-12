@@ -184,10 +184,13 @@ Relative to the Medium Linear Model, the Best Linear Model has both a lower AIC 
 # Question 3
 
 ```{r, echo=FALSE, include=FALSE}
+#import data
 german_credit = read.csv('/Users/franklinstudent/Desktop/GitHub/Exercise-2/german_credit.csv')
 
+#create list of credit ratings
 Credit_Rating = c('good', 'poor', 'terrible')
 
+#discover probabilities for relative credit ratings
 count_history = german_credit %>%
   filter(history %in% Credit_Rating) %>%
   group_by(history)%>%
@@ -195,6 +198,7 @@ count_history = german_credit %>%
             default = sum(Default == 1),
             Probability = default/total_history)
 
+#create bar graph of probabilities 
 bar_graph2 = ggplot(data = count_history) + 
   geom_col(mapping = aes(x = Credit_Rating, y = Probability, fill = Credit_Rating), 
            position = 'dodge') + ggtitle("Default Probabilities") +
@@ -226,10 +230,12 @@ If the purpose of the model is to screen prospective borrowers to classify them 
 # Question 4
 
 ```{r, echo=FALSE, include=FALSE}
+#import data
 dev = read_csv('/Users/franklinstudent/Desktop/GitHub/Exercise-2/hotels_dev.csv')
 ```
 
 ```{r, echo = FALSE, include=FALSE}
+#Train, Test, Split
 dev_split = initial_split(dev, prop = 0.8)
 dev_train = training(dev_split)
 dev_test = testing(dev_split)
@@ -302,10 +308,10 @@ table(dev_test$children)
 
 
 
-
+#import data
 val = read_csv('/Users/franklinstudent/Desktop/GitHub/Exercise-2/hotels_val.csv')
 
-
+#logit model
 logit_val = glm(children ~ hotel + lead_time+ reserved_room_type + assigned_room_type + 
                   booking_changes + adults + required_car_parking_spaces + booking_changes + 
                   average_daily_rate + is_repeated_guest + arrival_date, data = val, family = 'binomial')
@@ -367,9 +373,9 @@ roc
 ```
 
 
-#Model Validation 2
+## Model Validation 2
 ```{r}
-
+# 20 folds
 knn_k20 = caret::knn3(children ~ hotel + lead_time+ reserved_room_type + assigned_room_type + 
                         booking_changes + adults + required_car_parking_spaces + booking_changes + 
                         average_daily_rate + is_repeated_guest + arrival_date, data = val, k = 20)
